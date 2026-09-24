@@ -1,0 +1,72 @@
+/* style.css —— 全局样式。
+   这里定义整个应用共用的基础样式、字体和主题变量。 */
+
+/* ============ CSS 变量（主题基础） ============
+   CSS 变量用 --名字 定义，用 var(--名字) 使用。
+   集中在 :root 里定义，改一个地方就能全局换主题。
+*/
+:root {
+  /* 颜色（亮色主题） */
+  --color-bg: #ffffff;            /* 页面背景 */
+  --color-surface: #f5f5f7;       /* 卡片/面板背景 */
+  --color-text: #1d1d1f;          /* 主文字 */
+  --color-text-secondary: #6e6e73; /* 次要文字 */
+  --color-border: #d2d2d7;        /* 边框 */
+  --color-primary: #2563eb;       /* 主色调（按钮等） */
+  --color-error: #dc2626;         /* 错误 */
+  --color-success: #16a34a;       /* 成功 */
+
+  /* 字体 */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', 'Menlo', monospace;
+
+  /* 圆角 / 间距 */
+  --radius: 8px;
+  --space: 16px;
+}
+
+/* ============ 暗色主题 ============
+   当用户操作系统处于暗色模式时，自动切换到这些颜色。
+   这就是"换主题只改变量"的好处：下面所有 var() 自动生效。
+*/
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1e1e1e;
+    --color-surface: #252526;
+    --color-text: #e5e5e5;
+    --color-text-secondary: #9d9d9d;
+    --color-border: #3a3a3a;
+    --color-primary: #3b82f6;
+    --color-error: #f87171;
+    --color-success: #4ade80;
+  }
+}
+
+/* ============ 基础重置 ============ */
+/* box-sizing: border-box 让"宽度"包含 padding 和 border，布局更直观 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;                        /* 去掉浏览器默认的 8px 外边距 */
+  font-family: var(--font-sans);    /* 全局用无衬线字体 */
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased; /* 让文字在 macOS 上更清晰 */
+}
+
+/* 代码、JSON 内容用等宽字体，保证对齐整齐 */
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+/* 让 Vue 应用占满整个视口高度 */
+#app {
+  min-height: 100vh;
+}
