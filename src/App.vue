@@ -54,7 +54,7 @@ function doClear() {
 <template>
   <div class="app">
     <header class="app-header">
-      <h1>JSON 格式化工具</h1>
+      <h1>JSON 格式化工具 v2</h1>
       <span class="badge">🔒 隐私优先 · 数据仅在本地处理</span>
     </header>
 
