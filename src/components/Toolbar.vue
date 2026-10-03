@@ -12,6 +12,7 @@ const emit = defineEmits([
   'update:indent', // v-model 事件：缩进选项变化（传数据）
   'format', // 命令：执行格式化
   'minify', // 命令：执行压缩
+  'sample', // 命令：填入示例 JSON
   'clear', // 命令：清空
 ])
 
@@ -25,6 +26,7 @@ function onIndentChange(event) {
   <div class="toolbar">
     <button class="btn primary" @click="emit('format')">格式化</button>
     <button class="btn" @click="emit('minify')">压缩</button>
+    <button class="btn" @click="emit('sample')">示例</button>
 
     <label class="indent">
       缩进

@@ -14,6 +14,26 @@ const indent = ref('2') // 缩进选项：'2' | '4' | 'tab'
 const result = ref('') // 格式化/压缩后的结果
 const error = ref(null) // 错误对象 { message, line, column }，无错误时为 null
 
+// 示例 JSON：展示本工具特色（注释、单引号、尾逗号、大数、嵌套结构）
+const sampleJson = `{
+  // 支持注释：JSON5 允许 // 和 /* */ 注释
+  name: '隐私优先 JSON 工具', // 支持单引号
+  version: '1.0.0',
+  features: [
+    '格式化',
+    '压缩',
+    'JSON5 解析',
+    '大数精度保护',
+  ], // 支持尾逗号
+  big_number: 123456789012345678901234567890,
+  user: {
+    id: 1001,
+    nickname: 'tab',
+    tags: ['json', 'developer'],
+    active: true,
+  },
+}`
+
 // ---------- 逻辑 ----------
 
 // 把 json.js 抛出的错误转成界面可读的对象
@@ -49,6 +69,12 @@ function doClear() {
   result.value = ''
   error.value = null
 }
+
+// 填入示例并自动格式化
+function doSample() {
+  input.value = sampleJson
+  doFormat() // 复用格式化逻辑，让用户立刻看到效果
+}
 </script>
 
 <template>
@@ -62,6 +88,7 @@ function doClear() {
       v-model:indent="indent"
       @format="doFormat"
       @minify="doMinify"
+      @sample="doSample"
       @clear="doClear"
     />
 
