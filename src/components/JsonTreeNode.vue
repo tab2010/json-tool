@@ -3,8 +3,8 @@
 // 这是 Vue 进阶的重要概念：组件在自己的 template 里引用自己，
 // 从而递归渲染任意深度的嵌套结构。
 
-import { ref, computed } from 'vue'
-import { isBigNumber } from '../utils/json.js'
+import { ref, computed, onBeforeUnmount } from 'vue'
+import { isBigNumber, stringify } from '../utils/json.js'
 import { copyText } from '../utils/clipboard.js'
 
 const props = defineProps({
@@ -17,7 +17,8 @@ const props = defineProps({
 })
 
 const expanded = ref(true) // 默认展开
-const copied = ref(false) // 复制路径后的临时反馈
+const copied = ref(false) // 复制后的临时反馈
+const menuOpen = ref(false) // 复制菜单是否打开
 
 // 判断值的类型（BigNumber 归为 number）
 const type = computed(() => {
@@ -70,12 +71,51 @@ function toggle() {
   if (isExpandable.value) expanded.value = !expanded.value
 }
 
-// 复制当前节点的 JSONPath
-async function copyPath() {
-  await copyText(props.path)
+// 复制 value 时的文本（字符串不加引号，对象/数组序列化成紧凑 JSON）
+function valueText(v) {
+  if (v === null) return 'null'
+  if (typeof v === 'string') return v
+  if (typeof v === 'boolean') return v ? 'true' : 'false'
+  if (typeof v === 'number') return String(v)
+  if (isBigNumber(v)) return v.toFixed()
+  return stringify(v, 0)
+}
+
+// 打开/关闭复制菜单
+function toggleMenu() {
+  menuOpen.value = !menuOpen.value
+  if (menuOpen.value) {
+    // 下一轮事件循环再注册，避免本次点击立刻触发关闭
+    setTimeout(() => document.addEventListener('click', closeMenu), 0)
+  } else {
+    document.removeEventListener('click', closeMenu)
+  }
+}
+
+// 关闭菜单（并移除全局点击监听）
+function closeMenu() {
+  menuOpen.value = false
+  document.removeEventListener('click', closeMenu)
+}
+
+// 复制指定内容：path / key / value / kv
+async function copyOption(kind) {
+  let text = ''
+  if (kind === 'path') text = props.path
+  else if (kind === 'key') text = String(props.keyName)
+  else if (kind === 'value') text = valueText(props.value)
+  else if (kind === 'kv') text = String(props.keyName) + ': ' + valueText(props.value)
+
+  await copyText(text)
   copied.value = true
   setTimeout(() => (copied.value = false), 1500)
+  closeMenu()
 }
+
+// 组件销毁时清理全局监听，避免内存泄漏
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeMenu)
+})
 </script>
 
 <template>
@@ -88,13 +128,16 @@ async function copyPath() {
       <span v-if="!isExpandable" class="value" :class="type">{{ displayText }}</span>
       <!-- 可展开但折叠：显示预览 -->
       <span v-else-if="!expanded" class="value preview">{{ preview }}</span>
-      <!-- 复制路径按钮（hover 时显示） -->
-      <button
-        v-if="keyName !== null"
-        class="copy-btn"
-        :title="path"
-        @click.stop="copyPath"
-      >{{ copied ? '已复制' : '复制' }}</button>
+      <!-- 复制菜单（hover 时显示按钮，点击弹出菜单） -->
+      <div v-if="keyName !== null" class="copy-wrap" :class="{ open: menuOpen }" @click.stop>
+        <button class="copy-btn" :title="path" @click="toggleMenu">{{ copied ? '已复制' : '复制 ▾' }}</button>
+        <div v-if="menuOpen" class="copy-menu">
+          <button class="menu-item" @click="copyOption('path')">复制路径</button>
+          <button class="menu-item" @click="copyOption('key')">复制 key</button>
+          <button class="menu-item" @click="copyOption('value')">复制 value</button>
+          <button class="menu-item" @click="copyOption('kv')">复制 key: value</button>
+        </div>
+      </div>
     </div>
 
     <!-- 展开时递归渲染子节点 -->
@@ -130,10 +173,19 @@ async function copyPath() {
   background-color: var(--color-bg);
 }
 
-/* 复制路径按钮：默认隐藏，hover 该行时显示 */
-.copy-btn {
+/* 复制菜单：默认隐藏，hover 该行或菜单打开时显示 */
+.copy-wrap {
   display: none;
+  position: relative;
   margin-left: auto;
+}
+
+.node-line:hover .copy-wrap,
+.copy-wrap.open {
+  display: inline-block;
+}
+
+.copy-btn {
   padding: 0 6px;
   font-size: 11px;
   line-height: 1.5;
@@ -142,6 +194,7 @@ async function copyPath() {
   border: 1px solid var(--color-border);
   border-radius: 4px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .copy-btn:hover {
@@ -149,8 +202,37 @@ async function copyPath() {
   border-color: var(--color-primary);
 }
 
-.node-line:hover .copy-btn {
-  display: inline-block;
+.copy-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  margin-top: 4px;
+  min-width: 128px;
+  padding: 4px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.menu-item:hover {
+  background-color: var(--color-bg);
+  color: var(--color-primary);
 }
 
 .arrow {
