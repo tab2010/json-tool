@@ -2,12 +2,13 @@
 // JsonOutput.vue —— 输出区组件：
 // 展示格式化/压缩结果，或展示错误信息（含行列号），并提供复制、下载。
 
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import JsonTreeNode from './JsonTreeNode.vue'
 import { copyText } from '../utils/clipboard.js'
 import { jsonToTypeScript } from '../utils/toTypeScript.js'
 import { jsonToSchema } from '../utils/toJsonSchema.js'
 import { jsonToYaml } from '../utils/toYaml.js'
+import { jsonToCsv } from '../utils/toCsv.js'
 
 // 接收三个 props：
 // result —— 成功时的结果字符串（文本视图用）
@@ -22,11 +23,22 @@ const props = defineProps({
 // copied 是一个临时状态：复制成功后短暂显示"已复制"，1.5 秒后恢复
 const copied = ref(false)
 
-// mode 是视图模式：'text' / 'tree' / 'ts' / 'schema' / 'yaml'
+// mode 是视图模式：'text' / 'tree' / 'ts' / 'schema' / 'yaml' / 'csv'
 const mode = ref('text')
 
+// 模式名称映射（下拉菜单显示用）
+const MODE_LABELS = {
+  text: '文本',
+  tree: '树形',
+  ts: 'TS 类型',
+  schema: 'Schema',
+  yaml: 'YAML',
+  csv: 'CSV',
+}
+const modeLabel = computed(() => MODE_LABELS[mode.value] || '文本')
+
 // 转换类模式列表（生成转换结果而非展示 JSON）
-const CONVERSIONS = ['ts', 'schema', 'yaml']
+const CONVERSIONS = ['ts', 'schema', 'yaml', 'csv']
 const isConversion = computed(() => CONVERSIONS.includes(mode.value))
 
 // 转换结果（由 parsed 转换而来，随 mode 变化）
@@ -35,12 +47,43 @@ const convertedText = computed(() => {
   if (mode.value === 'ts') return jsonToTypeScript(props.parsed)
   if (mode.value === 'schema') return jsonToSchema(props.parsed)
   if (mode.value === 'yaml') return jsonToYaml(props.parsed)
+  if (mode.value === 'csv') return jsonToCsv(props.parsed)
   return ''
 })
 
 // 当前视图对应的"输出文本"（复制/下载用，转换模式用转换结果）
 const outputText = computed(() => {
   return isConversion.value ? convertedText.value : props.result
+})
+
+// 下拉菜单是否打开
+const modeMenuOpen = ref(false)
+
+// 切换下拉菜单
+function toggleModeMenu() {
+  modeMenuOpen.value = !modeMenuOpen.value
+  if (modeMenuOpen.value) {
+    // 下一轮事件循环再注册，避免本次点击立刻触发关闭
+    setTimeout(() => document.addEventListener('click', closeModeMenu), 0)
+  } else {
+    document.removeEventListener('click', closeModeMenu)
+  }
+}
+
+function closeModeMenu() {
+  modeMenuOpen.value = false
+  document.removeEventListener('click', closeModeMenu)
+}
+
+// 选择模式并关闭菜单
+function selectMode(m) {
+  mode.value = m
+  closeModeMenu()
+}
+
+// 组件销毁时清理全局监听
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeModeMenu)
 })
 
 // 复制当前视图的内容到剪贴板（复用 clipboard.js 的工具函数）
@@ -55,6 +98,7 @@ const FILENAMES = {
   ts: 'types.ts',
   schema: 'schema.json',
   yaml: 'output.yaml',
+  csv: 'output.csv',
 }
 
 // 把当前视图的内容下载为文件（转换模式下载对应格式，其余下载 .json）
@@ -78,12 +122,16 @@ function downloadResult() {
     <div class="header">
       <h2 class="title">输出</h2>
       <template v-if="result">
-        <div class="view-toggle">
-          <button class="btn" :class="{ active: mode === 'text' }" @click="mode = 'text'">文本</button>
-          <button class="btn" :class="{ active: mode === 'tree' }" @click="mode = 'tree'">树形</button>
-          <button class="btn" :class="{ active: mode === 'ts' }" @click="mode = 'ts'">TS 类型</button>
-          <button class="btn" :class="{ active: mode === 'schema' }" @click="mode = 'schema'" title="JSON Schema">Schema</button>
-          <button class="btn" :class="{ active: mode === 'yaml' }" @click="mode = 'yaml'">YAML</button>
+        <div class="view-toggle" @click.stop>
+          <button class="btn" @click="toggleModeMenu">{{ modeLabel }} ▾</button>
+          <div v-if="modeMenuOpen" class="mode-menu">
+            <button class="menu-item" @click="selectMode('text')">文本</button>
+            <button class="menu-item" @click="selectMode('tree')">树形</button>
+            <button class="menu-item" @click="selectMode('ts')">TS 类型</button>
+            <button class="menu-item" @click="selectMode('schema')" title="JSON Schema">Schema</button>
+            <button class="menu-item" @click="selectMode('yaml')">YAML</button>
+            <button class="menu-item" @click="selectMode('csv')">CSV</button>
+          </div>
         </div>
         <span class="spacer"></span>
         <button class="btn" @click="copyResult">{{ copied ? '已复制 ✓' : '复制' }}</button>
@@ -108,7 +156,7 @@ function downloadResult() {
       <JsonTreeNode :value="parsed" />
     </div>
 
-    <!-- 转换视图（TS / JSON Schema / YAML） -->
+    <!-- 转换视图（TS / Schema / YAML / CSV） -->
     <pre v-else-if="result && isConversion" class="result">{{ convertedText }}</pre>
 
     <p v-else class="hint">格式化结果会显示在这里</p>
@@ -152,16 +200,42 @@ function downloadResult() {
   color: var(--color-primary);
 }
 
-/* 视图切换按钮组 */
+/* 视图切换下拉菜单 */
 .view-toggle {
-  display: flex;
-  gap: 4px;
+  position: relative;
 }
 
-.view-toggle .btn.active {
-  background-color: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #fff;
+.mode-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  margin-top: 4px;
+  min-width: 120px;
+  padding: 4px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.menu-item:hover {
+  background-color: var(--color-bg);
+  color: var(--color-primary);
 }
 
 .spacer {
