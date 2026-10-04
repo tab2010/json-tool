@@ -12,7 +12,7 @@
 - **树形折叠视图**：可折叠的层级浏览，适合大 JSON
 - **JSONPath 路径复制**：点节点复制路径（如 `$.user.tags[0]`）
 - **节点复制菜单**：复制 key / value / key: value
-- **转 TypeScript 类型**：JSON → TS `interface`
+- **转 TypeScript / JSON Schema / YAML / CSV**：JSON → TS `interface` / JSON Schema / YAML / CSV 表格
 - **错误定位**：报错显示第几行第几列
 - **暗色主题 + 移动端响应式**
 - **隐私优先**：零网络请求、无统计埋点、数据只在本地处理
@@ -47,12 +47,20 @@ src/
 ├── utils/
 │   ├── json.js          # 核心逻辑：解析/格式化/压缩/大数保护/错误定位
 │   ├── toTypeScript.js  # JSON → TypeScript 类型
+│   ├── toJsonSchema.js  # JSON → JSON Schema
+│   ├── toYaml.js        # JSON → YAML
+│   ├── toCsv.js         # JSON → CSV
 │   └── clipboard.js     # 剪贴板工具
 ├── components/
 │   ├── Toolbar.vue      # 工具栏（格式化/压缩/示例/缩进）
 │   ├── JsonEditor.vue   # 输入区
-│   ├── JsonOutput.vue   # 输出区（文本/树形/TS 类型切换）
+│   ├── JsonOutput.vue   # 输出区（文本/树形/转换切换）
 │   └── JsonTreeNode.vue # 树节点（递归组件）
 ├── App.vue              # 根组件
 └── main.js              # 入口
 ```
+
+## 许可证
+
+[MIT](./LICENSE)
+

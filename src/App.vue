@@ -110,6 +110,11 @@ function doSample() {
         <JsonOutput :result="result" :parsed="parsed" :error="error" />
       </section>
     </main>
+
+    <footer class="app-footer">
+      <span>🔒 数据仅在本地处理，不上传服务器</span>
+      <a href="https://github.com/tab2010/json-tool/issues" target="_blank" rel="noopener">反馈 / 问题</a>
+    </footer>
   </div>
 </template>
 
@@ -160,6 +165,25 @@ function doSample() {
   margin: 0 0 8px;
   font-size: 0.95rem;
   color: var(--color-text-secondary);
+}
+
+.app-footer {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px var(--space);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.app-footer a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  text-decoration: underline;
 }
 
 /* 移动端：两列变一列 */
