@@ -38,6 +38,120 @@ function formatNumber(value) {
   return 'null'
 }
 
+// ---------- 大整数保护（JSON5 路径） ----------
+// 背景：json5 用 Number() 解析数字，会丢失超出安全范围（2^53-1）的整数精度。
+// 解决：解析前把大整数包装成带标记的字符串，解析后再还原成 BigNumber。
+
+const BIGINT_MARK = '__JSON_TOOL_BIGINT__'
+
+// 扫描文本，把超出安全范围的大整数包装成带标记的字符串。
+// 用逐字符扫描而不是正则，是为了正确跳过字符串和注释里的数字。
+function protectBigIntegers(text) {
+  let out = ''
+  let i = 0
+  const len = text.length
+
+  while (i < len) {
+    const ch = text[i]
+
+    // 字符串（单引号或双引号）：原样复制，正确处理转义
+    if (ch === '"' || ch === "'") {
+      const quote = ch
+      out += ch
+      i++
+      while (i < len) {
+        const c = text[i]
+        out += c
+        if (c === '\\' && i + 1 < len) {
+          out += text[i + 1] // 转义字符连同被转义的字符一起复制
+          i += 2
+          continue
+        }
+        if (c === quote) {
+          i++
+          break
+        }
+        i++
+      }
+      continue
+    }
+
+    // 行注释 // ... 到行尾
+    if (ch === '/' && text[i + 1] === '/') {
+      while (i < len && text[i] !== '\n') {
+        out += text[i]
+        i++
+      }
+      continue
+    }
+
+    // 块注释 /* ... */
+    if (ch === '/' && text[i + 1] === '*') {
+      out += '/*'
+      i += 2
+      while (i < len && !(text[i] === '*' && text[i + 1] === '/')) {
+        out += text[i]
+        i++
+      }
+      if (i < len) {
+        out += '*/'
+        i += 2
+      }
+      continue
+    }
+
+    // 数字（可能是 - 开头）
+    if (ch === '-' || (ch >= '0' && ch <= '9')) {
+      const start = i
+      i++ // 跳过 - 或第一个数字
+      while (i < len && text[i] >= '0' && text[i] <= '9') i++
+      if (text[i] === '.') {
+        i++
+        while (i < len && text[i] >= '0' && text[i] <= '9') i++
+      }
+      if (text[i] === 'e' || text[i] === 'E') {
+        i++
+        if (text[i] === '+' || text[i] === '-') i++
+        while (i < len && text[i] >= '0' && text[i] <= '9') i++
+      }
+      const raw = text.slice(start, i)
+      // 只处理"纯整数"（无小数/指数），且超出安全范围
+      if (/^-?\d+$/.test(raw)) {
+        const big = BigInt(raw)
+        if (big > BigInt(Number.MAX_SAFE_INTEGER) || big < BigInt(Number.MIN_SAFE_INTEGER)) {
+          out += JSON.stringify(BIGINT_MARK + raw) // 包装成字符串
+          continue
+        }
+      }
+      out += raw
+      continue
+    }
+
+    out += ch
+    i++
+  }
+
+  return out
+}
+
+// 递归地把带标记的字符串还原成 BigNumber
+function restoreBigIntegers(value) {
+  if (typeof value === 'string' && value.startsWith(BIGINT_MARK)) {
+    return JSONbig.parse(value.slice(BIGINT_MARK.length))
+  }
+  if (Array.isArray(value)) {
+    return value.map(restoreBigIntegers)
+  }
+  if (value !== null && typeof value === 'object') {
+    const result = {}
+    for (const key of Object.keys(value)) {
+      result[key] = restoreBigIntegers(value[key])
+    }
+    return result
+  }
+  return value
+}
+
 // ---------- 序列化（递归核心） ----------
 
 // 把解析后的 JS 值递归地转成 JSON 字符串。
@@ -94,7 +208,8 @@ export function parse(text) {
   } catch (_bigIntError) {
     // 2. 失败可能是 JSON5 扩展语法（注释/单引号/尾逗号），也可能是真的语法错误
     try {
-      return JSON5.parse(text)
+      // 先保护大整数再解析，避免 json5 用 Number() 丢失精度
+      return restoreBigIntegers(JSON5.parse(protectBigIntegers(text)))
     } catch (json5Error) {
       // 3. 用 json5 的错误（自带行列号）作为最终错误
       const err = new SyntaxError(json5Error.message)
