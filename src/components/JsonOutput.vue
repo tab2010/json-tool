@@ -58,6 +58,20 @@ function downloadResult() {
 
 <template>
   <div class="output">
+    <!-- 头部：标题 + 操作按钮（与输入区的标题行对齐，避免两列内容错位） -->
+    <div class="header">
+      <h2 class="title">输出</h2>
+      <template v-if="result">
+        <div class="view-toggle">
+          <button class="btn" :class="{ active: mode === 'text' }" @click="mode = 'text'">文本</button>
+          <button class="btn" :class="{ active: mode === 'tree' }" @click="mode = 'tree'">树形</button>
+        </div>
+        <span class="spacer"></span>
+        <button class="btn" @click="copyResult">{{ copied ? '已复制 ✓' : '复制' }}</button>
+        <button class="btn" @click="downloadResult">下载</button>
+      </template>
+    </div>
+
     <!-- 错误状态：显示错误信息 + 行列号 -->
     <div v-if="error" class="error">
       <div class="error-title">⚠️ JSON 解析失败</div>
@@ -67,26 +81,13 @@ function downloadResult() {
       </p>
     </div>
 
-    <!-- 正常状态：显示结果 + 操作按钮 -->
-    <template v-else-if="result">
-      <div class="actions">
-        <div class="view-toggle">
-          <button class="btn" :class="{ active: mode === 'text' }" @click="mode = 'text'">文本</button>
-          <button class="btn" :class="{ active: mode === 'tree' }" @click="mode = 'tree'">树形</button>
-        </div>
-        <span class="spacer"></span>
-        <button class="btn" @click="copyResult">{{ copied ? '已复制 ✓' : '复制' }}</button>
-        <button class="btn" @click="downloadResult">下载 .json</button>
-      </div>
+    <!-- 文本视图 -->
+    <pre v-else-if="result && mode === 'text'" class="result">{{ result }}</pre>
 
-      <!-- 文本视图 -->
-      <pre v-if="mode === 'text'" class="result">{{ result }}</pre>
-
-      <!-- 树形视图 -->
-      <div v-else class="tree">
-        <JsonTreeNode :value="parsed" />
-      </div>
-    </template>
+    <!-- 树形视图 -->
+    <div v-else-if="result" class="tree">
+      <JsonTreeNode :value="parsed" />
+    </div>
 
     <p v-else class="hint">格式化结果会显示在这里</p>
   </div>
@@ -99,20 +100,29 @@ function downloadResult() {
   flex-direction: column;
 }
 
-.actions {
+.header {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+  min-height: 24px; /* 与输入区标题行高度一致，保证两列内容对齐 */
+}
+
+.title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
 }
 
 .btn {
-  padding: 6px 14px;
+  padding: 2px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background-color: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .btn:hover {

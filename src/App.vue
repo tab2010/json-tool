@@ -107,7 +107,6 @@ function doSample() {
       </section>
 
       <section class="pane">
-        <h2 class="pane-title">输出</h2>
         <JsonOutput :result="result" :parsed="parsed" :error="error" />
       </section>
     </main>
