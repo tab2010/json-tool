@@ -6,6 +6,8 @@ import { ref, computed } from 'vue'
 import JsonTreeNode from './JsonTreeNode.vue'
 import { copyText } from '../utils/clipboard.js'
 import { jsonToTypeScript } from '../utils/toTypeScript.js'
+import { jsonToSchema } from '../utils/toJsonSchema.js'
+import { jsonToYaml } from '../utils/toYaml.js'
 
 // 接收三个 props：
 // result —— 成功时的结果字符串（文本视图用）
@@ -20,18 +22,25 @@ const props = defineProps({
 // copied 是一个临时状态：复制成功后短暂显示"已复制"，1.5 秒后恢复
 const copied = ref(false)
 
-// mode 是视图模式：'text'（文本）、'tree'（树形）或 'ts'（TS 类型）
+// mode 是视图模式：'text' / 'tree' / 'ts' / 'schema' / 'yaml'
 const mode = ref('text')
 
-// TS 类型视图的代码（由 parsed 转换而来）
-const tsCode = computed(() => {
+// 转换类模式列表（生成转换结果而非展示 JSON）
+const CONVERSIONS = ['ts', 'schema', 'yaml']
+const isConversion = computed(() => CONVERSIONS.includes(mode.value))
+
+// 转换结果（由 parsed 转换而来，随 mode 变化）
+const convertedText = computed(() => {
   if (props.parsed === null || props.parsed === undefined) return ''
-  return jsonToTypeScript(props.parsed)
+  if (mode.value === 'ts') return jsonToTypeScript(props.parsed)
+  if (mode.value === 'schema') return jsonToSchema(props.parsed)
+  if (mode.value === 'yaml') return jsonToYaml(props.parsed)
+  return ''
 })
 
-// 当前视图对应的"输出文本"（复制/下载用，TS 模式下是 TS 代码）
+// 当前视图对应的"输出文本"（复制/下载用，转换模式用转换结果）
 const outputText = computed(() => {
-  return mode.value === 'ts' ? tsCode.value : props.result
+  return isConversion.value ? convertedText.value : props.result
 })
 
 // 复制当前视图的内容到剪贴板（复用 clipboard.js 的工具函数）
@@ -41,17 +50,23 @@ async function copyResult() {
   setTimeout(() => (copied.value = false), 1500)
 }
 
-// 把当前视图的内容下载为文件（TS 模式下载 .ts，其余下载 .json）
+// 不同模式对应的下载文件名
+const FILENAMES = {
+  ts: 'types.ts',
+  schema: 'schema.json',
+  yaml: 'output.yaml',
+}
+
+// 把当前视图的内容下载为文件（转换模式下载对应格式，其余下载 .json）
 function downloadResult() {
   const text = outputText.value
   if (!text) return
-  const isTs = mode.value === 'ts'
   // Blob 把字符串变成"文件内容"，URL.createObjectURL 生成一个临时的本地下载地址
   const blob = new Blob([text], { type: 'text/plain' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = isTs ? 'types.ts' : 'formatted.json'
+  a.download = FILENAMES[mode.value] || 'formatted.json'
   a.click() // 触发下载
   URL.revokeObjectURL(url) // 释放临时地址，避免内存泄漏
 }
@@ -67,6 +82,8 @@ function downloadResult() {
           <button class="btn" :class="{ active: mode === 'text' }" @click="mode = 'text'">文本</button>
           <button class="btn" :class="{ active: mode === 'tree' }" @click="mode = 'tree'">树形</button>
           <button class="btn" :class="{ active: mode === 'ts' }" @click="mode = 'ts'">TS 类型</button>
+          <button class="btn" :class="{ active: mode === 'schema' }" @click="mode = 'schema'" title="JSON Schema">Schema</button>
+          <button class="btn" :class="{ active: mode === 'yaml' }" @click="mode = 'yaml'">YAML</button>
         </div>
         <span class="spacer"></span>
         <button class="btn" @click="copyResult">{{ copied ? '已复制 ✓' : '复制' }}</button>
@@ -91,8 +108,8 @@ function downloadResult() {
       <JsonTreeNode :value="parsed" />
     </div>
 
-    <!-- TS 类型视图 -->
-    <pre v-else-if="result && mode === 'ts'" class="result">{{ tsCode }}</pre>
+    <!-- 转换视图（TS / JSON Schema / YAML） -->
+    <pre v-else-if="result && isConversion" class="result">{{ convertedText }}</pre>
 
     <p v-else class="hint">格式化结果会显示在这里</p>
   </div>
