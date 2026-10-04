@@ -4,6 +4,7 @@
 
 import { ref } from 'vue'
 import JsonTreeNode from './JsonTreeNode.vue'
+import { copyText } from '../utils/clipboard.js'
 
 // 接收三个 props：
 // result —— 成功时的结果字符串（文本视图用）
@@ -21,22 +22,9 @@ const copied = ref(false)
 // mode 是视图模式：'text'（文本）或 'tree'（树形）
 const mode = ref('text')
 
-// 复制结果到剪贴板（全程在本地完成，符合隐私优先）
+// 复制结果到剪贴板（复用 clipboard.js 的工具函数）
 async function copyResult() {
-  const text = props.result
-  if (!text) return
-  try {
-    // navigator.clipboard 是现代浏览器的剪贴板 API
-    await navigator.clipboard.writeText(text)
-  } catch {
-    // 兜底方案：某些环境（如非 https）不支持 clipboard API，用隐藏文本框模拟
-    const ta = document.createElement('textarea')
-    ta.value = text
-    document.body.appendChild(ta)
-    ta.select()
-    document.execCommand('copy')
-    document.body.removeChild(ta)
-  }
+  await copyText(props.result)
   copied.value = true
   setTimeout(() => (copied.value = false), 1500)
 }

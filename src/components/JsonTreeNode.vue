@@ -5,15 +5,19 @@
 
 import { ref, computed } from 'vue'
 import { isBigNumber } from '../utils/json.js'
+import { copyText } from '../utils/clipboard.js'
 
 const props = defineProps({
   // 当前节点的 key 名。根节点传 null（不显示 key）；对象属性传字符串；数组元素传索引数字
   keyName: { type: [String, Number], default: null },
   // 当前节点的值（任意类型）
   value: { required: true },
+  // 当前节点的 JSONPath（根节点为 '$'）
+  path: { type: String, default: '$' },
 })
 
 const expanded = ref(true) // 默认展开
+const copied = ref(false) // 复制路径后的临时反馈
 
 // 判断值的类型（BigNumber 归为 number）
 const type = computed(() => {
@@ -43,13 +47,20 @@ const displayText = computed(() => {
   return ''
 })
 
-// 子节点列表：[{ key, value }]
+// 计算子节点的 JSONPath
+function childPath(parentPath, key) {
+  if (typeof key === 'number') return parentPath + '[' + key + ']' // 数组索引
+  if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) return parentPath + '.' + key // 简单标识符
+  return parentPath + "['" + key.replace(/'/g, "\\'") + "']" // 含特殊字符的 key
+}
+
+// 子节点列表：[{ key, value, path }]
 const children = computed(() => {
   if (Array.isArray(props.value)) {
-    return props.value.map((item, index) => ({ key: index, value: item }))
+    return props.value.map((item, index) => ({ key: index, value: item, path: childPath(props.path, index) }))
   }
   if (type.value === 'object') {
-    return Object.keys(props.value).map((key) => ({ key, value: props.value[key] }))
+    return Object.keys(props.value).map((key) => ({ key, value: props.value[key], path: childPath(props.path, key) }))
   }
   return []
 })
@@ -57,6 +68,13 @@ const children = computed(() => {
 // 点击切换展开/收起（只有可展开节点才响应）
 function toggle() {
   if (isExpandable.value) expanded.value = !expanded.value
+}
+
+// 复制当前节点的 JSONPath
+async function copyPath() {
+  await copyText(props.path)
+  copied.value = true
+  setTimeout(() => (copied.value = false), 1500)
 }
 </script>
 
@@ -70,6 +88,13 @@ function toggle() {
       <span v-if="!isExpandable" class="value" :class="type">{{ displayText }}</span>
       <!-- 可展开但折叠：显示预览 -->
       <span v-else-if="!expanded" class="value preview">{{ preview }}</span>
+      <!-- 复制路径按钮（hover 时显示） -->
+      <button
+        v-if="keyName !== null"
+        class="copy-btn"
+        :title="path"
+        @click.stop="copyPath"
+      >{{ copied ? '已复制' : '复制' }}</button>
     </div>
 
     <!-- 展开时递归渲染子节点 -->
@@ -79,6 +104,7 @@ function toggle() {
         :key="child.key"
         :key-name="child.key"
         :value="child.value"
+        :path="child.path"
       />
     </div>
   </div>
@@ -102,6 +128,29 @@ function toggle() {
 
 .node-line:hover {
   background-color: var(--color-bg);
+}
+
+/* 复制路径按钮：默认隐藏，hover 该行时显示 */
+.copy-btn {
+  display: none;
+  margin-left: auto;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.node-line:hover .copy-btn {
+  display: inline-block;
 }
 
 .arrow {
