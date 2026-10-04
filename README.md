@@ -1,5 +1,8 @@
 # JSON 格式化工具（隐私优先）
 
+[![GitHub stars](https://img.shields.io/github/stars/tab2010/json-tool?style=flat-square)](https://github.com/tab2010/json-tool/stargazers)
+[![License](https://img.shields.io/github/license/tab2010/json-tool?style=flat-square)](./LICENSE)
+
 一个纯前端、隐私优先的 JSON 格式化与转换工具。**所有数据处理都在浏览器本地完成，数据不上传服务器。**
 
 🔗 在线使用：https://jsonfmt.net
