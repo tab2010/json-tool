@@ -2,9 +2,10 @@
 // JsonOutput.vue —— 输出区组件：
 // 展示格式化/压缩结果，或展示错误信息（含行列号），并提供复制、下载。
 
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import JsonTreeNode from './JsonTreeNode.vue'
 import { copyText } from '../utils/clipboard.js'
+import { jsonToTypeScript } from '../utils/toTypeScript.js'
 
 // 接收三个 props：
 // result —— 成功时的结果字符串（文本视图用）
@@ -19,26 +20,38 @@ const props = defineProps({
 // copied 是一个临时状态：复制成功后短暂显示"已复制"，1.5 秒后恢复
 const copied = ref(false)
 
-// mode 是视图模式：'text'（文本）或 'tree'（树形）
+// mode 是视图模式：'text'（文本）、'tree'（树形）或 'ts'（TS 类型）
 const mode = ref('text')
 
-// 复制结果到剪贴板（复用 clipboard.js 的工具函数）
+// TS 类型视图的代码（由 parsed 转换而来）
+const tsCode = computed(() => {
+  if (props.parsed === null || props.parsed === undefined) return ''
+  return jsonToTypeScript(props.parsed)
+})
+
+// 当前视图对应的"输出文本"（复制/下载用，TS 模式下是 TS 代码）
+const outputText = computed(() => {
+  return mode.value === 'ts' ? tsCode.value : props.result
+})
+
+// 复制当前视图的内容到剪贴板（复用 clipboard.js 的工具函数）
 async function copyResult() {
-  await copyText(props.result)
+  await copyText(outputText.value)
   copied.value = true
   setTimeout(() => (copied.value = false), 1500)
 }
 
-// 把结果下载为 .json 文件
+// 把当前视图的内容下载为文件（TS 模式下载 .ts，其余下载 .json）
 function downloadResult() {
-  const text = props.result
+  const text = outputText.value
   if (!text) return
+  const isTs = mode.value === 'ts'
   // Blob 把字符串变成"文件内容"，URL.createObjectURL 生成一个临时的本地下载地址
-  const blob = new Blob([text], { type: 'application/json' })
+  const blob = new Blob([text], { type: 'text/plain' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'formatted.json'
+  a.download = isTs ? 'types.ts' : 'formatted.json'
   a.click() // 触发下载
   URL.revokeObjectURL(url) // 释放临时地址，避免内存泄漏
 }
@@ -53,6 +66,7 @@ function downloadResult() {
         <div class="view-toggle">
           <button class="btn" :class="{ active: mode === 'text' }" @click="mode = 'text'">文本</button>
           <button class="btn" :class="{ active: mode === 'tree' }" @click="mode = 'tree'">树形</button>
+          <button class="btn" :class="{ active: mode === 'ts' }" @click="mode = 'ts'">TS 类型</button>
         </div>
         <span class="spacer"></span>
         <button class="btn" @click="copyResult">{{ copied ? '已复制 ✓' : '复制' }}</button>
@@ -73,9 +87,12 @@ function downloadResult() {
     <pre v-else-if="result && mode === 'text'" class="result">{{ result }}</pre>
 
     <!-- 树形视图 -->
-    <div v-else-if="result" class="tree">
+    <div v-else-if="result && mode === 'tree'" class="tree">
       <JsonTreeNode :value="parsed" />
     </div>
+
+    <!-- TS 类型视图 -->
+    <pre v-else-if="result && mode === 'ts'" class="result">{{ tsCode }}</pre>
 
     <p v-else class="hint">格式化结果会显示在这里</p>
   </div>
