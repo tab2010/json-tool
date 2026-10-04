@@ -6,12 +6,13 @@ import { ref } from 'vue'
 import Toolbar from './components/Toolbar.vue'
 import JsonEditor from './components/JsonEditor.vue'
 import JsonOutput from './components/JsonOutput.vue'
-import { format, minify } from './utils/json.js'
+import { parse, stringify } from './utils/json.js'
 
 // ---------- 状态（响应式数据） ----------
 const input = ref('') // 用户输入的原始 JSON 文本
 const indent = ref('2') // 缩进选项：'2' | '4' | 'tab'
 const result = ref('') // 格式化/压缩后的结果
+const parsed = ref(null) // 解析后的值（供树形视图使用）
 const error = ref(null) // 错误对象 { message, line, column }，无错误时为 null
 
 // 示例 JSON：展示本工具特色（注释、单引号、尾逗号、大数、嵌套结构）
@@ -44,9 +45,12 @@ function toError(e) {
 // 执行格式化
 function doFormat() {
   try {
-    result.value = format(input.value, indent.value)
+    const value = parse(input.value) // 只解析一次，同时供文本和树形使用
+    parsed.value = value
+    result.value = stringify(value, indent.value)
     error.value = null
   } catch (e) {
+    parsed.value = null
     result.value = ''
     error.value = toError(e)
   }
@@ -55,9 +59,12 @@ function doFormat() {
 // 执行压缩
 function doMinify() {
   try {
-    result.value = minify(input.value)
+    const value = parse(input.value)
+    parsed.value = value
+    result.value = stringify(value, 0) // 0 表示压缩
     error.value = null
   } catch (e) {
+    parsed.value = null
     result.value = ''
     error.value = toError(e)
   }
@@ -67,6 +74,7 @@ function doMinify() {
 function doClear() {
   input.value = ''
   result.value = ''
+  parsed.value = null
   error.value = null
 }
 
@@ -100,7 +108,7 @@ function doSample() {
 
       <section class="pane">
         <h2 class="pane-title">输出</h2>
-        <JsonOutput :result="result" :error="error" />
+        <JsonOutput :result="result" :parsed="parsed" :error="error" />
       </section>
     </main>
   </div>

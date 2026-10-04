@@ -9,7 +9,8 @@ import JSONbig from 'json-bigint'
 
 // 判断一个值是否是 bignumber.js 的 BigNumber 实例。
 // json-bigint 会把超出安全范围的大整数解析成 BigNumber，从而保住精度。
-function isBigNumber(value) {
+// 导出供树形视图等外部模块识别大数使用。
+export function isBigNumber(value) {
   return (
     value !== null &&
     typeof value === 'object' &&

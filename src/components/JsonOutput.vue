@@ -3,17 +3,23 @@
 // 展示格式化/压缩结果，或展示错误信息（含行列号），并提供复制、下载。
 
 import { ref } from 'vue'
+import JsonTreeNode from './JsonTreeNode.vue'
 
-// 接收两个 props：
-// result —— 成功时的结果字符串
+// 接收三个 props：
+// result —— 成功时的结果字符串（文本视图用）
+// parsed —— 解析后的值（树形视图用）
 // error  —— 失败时的错误对象 { message, line, column }，没有错误则为 null
 const props = defineProps({
   result: { type: String, default: '' },
+  parsed: { default: null },
   error: { type: Object, default: null },
 })
 
 // copied 是一个临时状态：复制成功后短暂显示"已复制"，1.5 秒后恢复
 const copied = ref(false)
+
+// mode 是视图模式：'text'（文本）或 'tree'（树形）
+const mode = ref('text')
 
 // 复制结果到剪贴板（全程在本地完成，符合隐私优先）
 async function copyResult() {
@@ -62,14 +68,27 @@ function downloadResult() {
     </div>
 
     <!-- 正常状态：显示结果 + 操作按钮 -->
-    <template v-else>
-      <div v-if="result" class="actions">
+    <template v-else-if="result">
+      <div class="actions">
+        <div class="view-toggle">
+          <button class="btn" :class="{ active: mode === 'text' }" @click="mode = 'text'">文本</button>
+          <button class="btn" :class="{ active: mode === 'tree' }" @click="mode = 'tree'">树形</button>
+        </div>
+        <span class="spacer"></span>
         <button class="btn" @click="copyResult">{{ copied ? '已复制 ✓' : '复制' }}</button>
         <button class="btn" @click="downloadResult">下载 .json</button>
       </div>
-      <pre v-if="result" class="result">{{ result }}</pre>
-      <p v-else class="hint">格式化结果会显示在这里</p>
+
+      <!-- 文本视图 -->
+      <pre v-if="mode === 'text'" class="result">{{ result }}</pre>
+
+      <!-- 树形视图 -->
+      <div v-else class="tree">
+        <JsonTreeNode :value="parsed" />
+      </div>
     </template>
+
+    <p v-else class="hint">格式化结果会显示在这里</p>
   </div>
 </template>
 
@@ -99,6 +118,31 @@ function downloadResult() {
 .btn:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+/* 视图切换按钮组 */
+.view-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.view-toggle .btn.active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.tree {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-surface);
 }
 
 .result {
