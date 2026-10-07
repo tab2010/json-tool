@@ -2,13 +2,14 @@
 // 原理：把所有文案抽离到"语言字典"，用一个响应式 locale 控制当前语言，
 // 组件通过 t('key') 读取文案，切换 locale 时所有用到 t 的地方自动更新。
 
-import { ref } from 'vue'
+import { ref, watchEffect } from 'vue'
 
 // 语言字典：zh / en 两套文案
 const messages = {
   zh: {
     // 全局
     title: 'JSON 格式化工具',
+    pageTitle: 'JSON 格式化工具 - 隐私优先，数据不上传服务器',
     badge: '🔒 隐私优先 · 数据仅在本地处理',
     input: '输入',
     output: '输出',
@@ -50,6 +51,7 @@ const messages = {
   },
   en: {
     title: 'JSON Formatter',
+    pageTitle: 'JSON Formatter - Privacy-first, data stays local',
     badge: '🔒 Privacy-first · Data stays local',
     input: 'Input',
     output: 'Output',
@@ -132,5 +134,10 @@ export function setLocale(lang) {
     // localStorage 不可用，忽略（不影响本次切换）
   }
 }
+
+// 语言变化时同步更新浏览器标签页标题（title 标签在 Vue 应用之外，需手动更新）
+watchEffect(() => {
+  document.title = t('pageTitle')
+})
 
 export { locale }
