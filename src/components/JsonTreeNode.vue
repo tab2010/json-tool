@@ -6,6 +6,7 @@
 import { ref, computed, onBeforeUnmount } from 'vue'
 import { isBigNumber, stringify } from '../utils/json.js'
 import { copyText } from '../utils/clipboard.js'
+import { t } from '../i18n/index.js'
 
 const props = defineProps({
   // 当前节点的 key 名。根节点传 null（不显示 key）；对象属性传字符串；数组元素传索引数字
@@ -34,8 +35,8 @@ const isExpandable = computed(() => type.value === 'object' || type.value === 'a
 
 // 折叠时的预览文本：{3 键} / [5 项]
 const preview = computed(() => {
-  if (Array.isArray(props.value)) return `[${props.value.length} 项]`
-  return `{${Object.keys(props.value).length} 键}`
+  if (Array.isArray(props.value)) return `[${props.value.length} ${t('items')}]`
+  return `{${Object.keys(props.value).length} ${t('keys')}}`
 })
 
 // 原始值的显示文本（对象/数组不在这里显示，由子节点负责）
@@ -130,12 +131,12 @@ onBeforeUnmount(() => {
       <span v-else-if="!expanded" class="value preview">{{ preview }}</span>
       <!-- 复制菜单（hover 时显示按钮，点击弹出菜单） -->
       <div v-if="keyName !== null" class="copy-wrap" :class="{ open: menuOpen }" @click.stop>
-        <button class="copy-btn" :title="path" @click="toggleMenu">{{ copied ? '已复制' : '复制 ▾' }}</button>
+        <button class="copy-btn" :title="path" @click="toggleMenu">{{ copied ? t('copiedShort') : t('copyBtn') }}</button>
         <div v-if="menuOpen" class="copy-menu">
-          <button class="menu-item" @click="copyOption('path')">复制路径</button>
-          <button class="menu-item" @click="copyOption('key')">复制 key</button>
-          <button class="menu-item" @click="copyOption('value')">复制 value</button>
-          <button class="menu-item" @click="copyOption('kv')">复制 key: value</button>
+          <button class="menu-item" @click="copyOption('path')">{{ t('copyPath') }}</button>
+          <button class="menu-item" @click="copyOption('key')">{{ t('copyKey') }}</button>
+          <button class="menu-item" @click="copyOption('value')">{{ t('copyValue') }}</button>
+          <button class="menu-item" @click="copyOption('kv')">{{ t('copyKv') }}</button>
         </div>
       </div>
     </div>

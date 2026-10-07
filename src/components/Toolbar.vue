@@ -3,6 +3,8 @@
 // 它自己不执行格式化逻辑，只是"发号施令"，让父组件去执行。
 // 这体现了"子组件不干重活，只上报意图"的分层思想。
 
+import { t } from '../i18n/index.js'
+
 defineProps({
   // 当前缩进选项：'2' | '4' | 'tab'
   indent: { type: String, default: '2' },
@@ -24,23 +26,23 @@ function onIndentChange(event) {
 
 <template>
   <div class="toolbar">
-    <button class="btn primary" @click="emit('format')">格式化</button>
-    <button class="btn" @click="emit('minify')">压缩</button>
-    <button class="btn" @click="emit('sample')">示例</button>
+    <button class="btn primary" @click="emit('format')">{{ t('format') }}</button>
+    <button class="btn" @click="emit('minify')">{{ t('minify') }}</button>
+    <button class="btn" @click="emit('sample')">{{ t('sample') }}</button>
 
     <label class="indent">
-      缩进
+      {{ t('indent') }}
       <select class="select" :value="indent" @change="onIndentChange">
-        <option value="2">2 空格</option>
-        <option value="4">4 空格</option>
-        <option value="tab">Tab</option>
+        <option value="2">{{ t('indent2') }}</option>
+        <option value="4">{{ t('indent4') }}</option>
+        <option value="tab">{{ t('indentTab') }}</option>
       </select>
     </label>
 
     <!-- spacer 占满剩余空间，把"清空"推到最右边 -->
     <span class="spacer"></span>
 
-    <button class="btn danger" @click="emit('clear')">清空</button>
+    <button class="btn danger" @click="emit('clear')">{{ t('clear') }}</button>
   </div>
 </template>
 

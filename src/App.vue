@@ -7,6 +7,7 @@ import Toolbar from './components/Toolbar.vue'
 import JsonEditor from './components/JsonEditor.vue'
 import JsonOutput from './components/JsonOutput.vue'
 import { parse, stringify } from './utils/json.js'
+import { t, locale, setLocale } from './i18n/index.js'
 
 // ---------- 状态（响应式数据） ----------
 const input = ref('') // 用户输入的原始 JSON 文本
@@ -88,8 +89,14 @@ function doSample() {
 <template>
   <div class="app">
     <header class="app-header">
-      <h1>JSON 格式化工具</h1>
-      <span class="badge">🔒 隐私优先 · 数据仅在本地处理</span>
+      <h1>{{ t('title') }}</h1>
+      <div class="header-right">
+        <span class="badge">{{ t('badge') }}</span>
+        <div class="lang-toggle">
+          <button :class="{ active: locale === 'zh' }" @click="setLocale('zh')">中文</button>
+          <button :class="{ active: locale === 'en' }" @click="setLocale('en')">EN</button>
+        </div>
+      </div>
     </header>
 
     <Toolbar
@@ -102,7 +109,7 @@ function doSample() {
 
     <main class="app-main">
       <section class="pane">
-        <h2 class="pane-title">输入</h2>
+        <h2 class="pane-title">{{ t('input') }}</h2>
         <JsonEditor v-model="input" />
       </section>
 
@@ -112,8 +119,8 @@ function doSample() {
     </main>
 
     <footer class="app-footer">
-      <span>🔒 数据仅在本地处理，不上传服务器</span>
-      <a href="https://github.com/tab2010/json-tool/issues" target="_blank" rel="noopener">反馈 / 问题</a>
+      <span>{{ t('footerPrivacy') }}</span>
+      <a href="https://github.com/tab2010/json-tool/issues" target="_blank" rel="noopener">{{ t('feedback') }}</a>
     </footer>
   </div>
 </template>
@@ -145,6 +152,34 @@ function doSample() {
   background-color: var(--color-primary);
   color: #fff;
   font-size: 0.85rem;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lang-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.lang-toggle button {
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.lang-toggle button.active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
 }
 
 .app-main {

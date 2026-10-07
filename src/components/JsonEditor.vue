@@ -3,6 +3,8 @@
 // 它自己不处理 JSON，只负责"收集输入"，把内容交给父组件去处理。
 // 这体现了组件的"单一职责"：本组件只管输入，解析逻辑在 json.js，结果展示在别的组件。
 
+import { t } from '../i18n/index.js'
+
 // defineProps：声明父组件可以传进来的属性（props）。
 // 这里声明 modelValue，配合下面的 defineEmits 实现 v-model 双向绑定。
 defineProps({
@@ -27,7 +29,7 @@ function onInput(event) {
   <textarea
     class="editor"
     :value="modelValue"
-    placeholder="在这里粘贴你的 JSON...（支持注释、单引号、尾逗号）"
+    :placeholder="t('placeholder')"
     spellcheck="false"
     @input="onInput"
   ></textarea>

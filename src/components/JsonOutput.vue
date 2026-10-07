@@ -9,6 +9,7 @@ import { jsonToTypeScript } from '../utils/toTypeScript.js'
 import { jsonToSchema } from '../utils/toJsonSchema.js'
 import { jsonToYaml } from '../utils/toYaml.js'
 import { jsonToCsv } from '../utils/toCsv.js'
+import { t } from '../i18n/index.js'
 
 // 接收三个 props：
 // result —— 成功时的结果字符串（文本视图用）
@@ -26,16 +27,18 @@ const copied = ref(false)
 // mode 是视图模式：'text' / 'tree' / 'ts' / 'schema' / 'yaml' / 'csv'
 const mode = ref('text')
 
-// 模式名称映射（下拉菜单显示用）
-const MODE_LABELS = {
-  text: '文本',
-  tree: '树形',
-  ts: 'TS 类型',
-  schema: 'Schema',
-  yaml: 'YAML',
-  csv: 'CSV',
-}
-const modeLabel = computed(() => MODE_LABELS[mode.value] || '文本')
+// 模式名称映射（下拉菜单显示用，随语言变化）
+const modeLabel = computed(() => {
+  const labels = {
+    text: t('viewText'),
+    tree: t('viewTree'),
+    ts: t('viewTs'),
+    schema: t('viewSchema'),
+    yaml: t('viewYaml'),
+    csv: t('viewCsv'),
+  }
+  return labels[mode.value] || t('viewText')
+})
 
 // 转换类模式列表（生成转换结果而非展示 JSON）
 const CONVERSIONS = ['ts', 'schema', 'yaml', 'csv']
@@ -120,31 +123,31 @@ function downloadResult() {
   <div class="output">
     <!-- 头部：标题 + 操作按钮（与输入区的标题行对齐，避免两列内容错位） -->
     <div class="header">
-      <h2 class="title">输出</h2>
+      <h2 class="title">{{ t('output') }}</h2>
       <template v-if="result">
         <div class="view-toggle" @click.stop>
           <button class="btn" @click="toggleModeMenu">{{ modeLabel }} ▾</button>
           <div v-if="modeMenuOpen" class="mode-menu">
-            <button class="menu-item" @click="selectMode('text')">文本</button>
-            <button class="menu-item" @click="selectMode('tree')">树形</button>
-            <button class="menu-item" @click="selectMode('ts')">TS 类型</button>
-            <button class="menu-item" @click="selectMode('schema')" title="JSON Schema">Schema</button>
-            <button class="menu-item" @click="selectMode('yaml')">YAML</button>
-            <button class="menu-item" @click="selectMode('csv')">CSV</button>
+            <button class="menu-item" @click="selectMode('text')">{{ t('viewText') }}</button>
+            <button class="menu-item" @click="selectMode('tree')">{{ t('viewTree') }}</button>
+            <button class="menu-item" @click="selectMode('ts')">{{ t('viewTs') }}</button>
+            <button class="menu-item" @click="selectMode('schema')">{{ t('viewSchema') }}</button>
+            <button class="menu-item" @click="selectMode('yaml')">{{ t('viewYaml') }}</button>
+            <button class="menu-item" @click="selectMode('csv')">{{ t('viewCsv') }}</button>
           </div>
         </div>
         <span class="spacer"></span>
-        <button class="btn" @click="copyResult">{{ copied ? '已复制 ✓' : '复制' }}</button>
-        <button class="btn" @click="downloadResult">下载</button>
+        <button class="btn" @click="copyResult">{{ copied ? t('copied') : t('copy') }}</button>
+        <button class="btn" @click="downloadResult">{{ t('download') }}</button>
       </template>
     </div>
 
     <!-- 错误状态：显示错误信息 + 行列号 -->
     <div v-if="error" class="error">
-      <div class="error-title">⚠️ JSON 解析失败</div>
+      <div class="error-title">{{ t('errorTitle') }}</div>
       <p class="error-message">{{ error.message }}</p>
       <p v-if="error.line" class="error-location">
-        位置：第 {{ error.line }} 行，第 {{ error.column }} 列
+        {{ t('errorLocation', { line: error.line, column: error.column }) }}
       </p>
     </div>
 
@@ -159,7 +162,7 @@ function downloadResult() {
     <!-- 转换视图（TS / Schema / YAML / CSV） -->
     <pre v-else-if="result && isConversion" class="result">{{ convertedText }}</pre>
 
-    <p v-else class="hint">格式化结果会显示在这里</p>
+    <p v-else class="hint">{{ t('hint') }}</p>
   </div>
 </template>
 
