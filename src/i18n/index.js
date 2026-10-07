@@ -93,8 +93,22 @@ function detectLocale() {
   return nav.toLowerCase().startsWith('zh') ? 'zh' : 'en'
 }
 
+// localStorage 存储的 key
+const STORAGE_KEY = 'jsonfmt-locale'
+
+// 读取初始语言：优先用户之前的选择（localStorage），否则按浏览器语言
+function getInitialLocale() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved && messages[saved]) return saved
+  } catch {
+    // localStorage 不可用（隐私模式等），忽略
+  }
+  return detectLocale()
+}
+
 // 当前语言（响应式）
-const locale = ref(detectLocale())
+const locale = ref(getInitialLocale())
 
 // 翻译函数：t('key') 或 t('key', { line: 1, column: 2 })
 export function t(key, params) {
@@ -108,9 +122,15 @@ export function t(key, params) {
   return text
 }
 
-// 切换语言
+// 切换语言（并持久化到 localStorage，下次访问记住选择）
 export function setLocale(lang) {
-  if (messages[lang]) locale.value = lang
+  if (!messages[lang]) return
+  locale.value = lang
+  try {
+    localStorage.setItem(STORAGE_KEY, lang)
+  } catch {
+    // localStorage 不可用，忽略（不影响本次切换）
+  }
 }
 
 export { locale }
